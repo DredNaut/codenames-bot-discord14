@@ -1,6 +1,33 @@
 import DiscordJS, { AttachmentBuilder, Client, ContextMenuCommandAssertions, GatewayIntentBits } from 'discord.js'
 const Canvas = require('@napi-rs/canvas')
 
+enum colorEnum {
+    red = 0,
+    blue,
+    white,
+    black
+}
+
+function colorConverter(color: number) : string {
+    var hexColor: string = "";
+
+    switch(color) {
+        case colorEnum.red: // Red
+            hexColor = "#bf3232"
+            break
+        case colorEnum.blue: // Blue
+            hexColor = "#2f81f5"
+            break
+        case colorEnum.white: // White
+            hexColor = "#deddd1"
+            break
+        case colorEnum.black: // Black
+            hexColor = "#212121"
+    }
+
+    return hexColor
+}
+
 class Coordinate {
     x: number
     y: number
@@ -14,6 +41,7 @@ class Coordinate {
 class Board {
     canvas;
     ctx: any;
+    key: any;
 
     constructor() {
         this.canvas = Canvas.createCanvas(1200, 1200)
@@ -21,6 +49,7 @@ class Board {
         this.ctx.fillStyle = "#36393f"
         this.ctx.strokeStyle = "#000000"
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+        this.key = []
     }
 
     calcWordSize(word: string) {
@@ -48,7 +77,19 @@ class Board {
         this.ctx.stroke()
     }
 
-    drawBoard(wordlist: any) {
+    drawColorsOnBoard(colorKey: Array<number>) {
+        let i = 0
+        for (let x=0; x <= 1000; x += 240) {
+            for (let y=0; y <= 1000; y += 240) {
+                this.ctx.fillStyle = colorConverter(colorKey[i])
+                this.ctx.fillRect(x + 20, y + 20, 200, 200)
+                i++
+            }
+        }
+        this.ctx.stroke()
+    }
+
+    drawBoard(wordlist: any, colorKey?: Array<number>) {
         // Draw cards
         this.ctx.beginPath()
         this.ctx.moveTo(240, 0)
@@ -61,6 +102,9 @@ class Board {
         this.ctx.lineTo(960, 1200)
         this.ctx.stroke()
 
+        if (colorKey) {
+            this.drawColorsOnBoard(colorKey)
+        }
         this.drawWordsOnBoard(wordlist)
     }
 

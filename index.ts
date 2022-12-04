@@ -13,63 +13,6 @@ enum colorEnum {
     black
 }
 
-function colorConverter(color: number) : string {
-    var hexColor: string = "";
-
-    switch(color) {
-        case colorEnum.red: // Red
-            hexColor = "#bf3232"
-            break
-        case colorEnum.blue: // Blue
-            hexColor = "#2f81f5"
-            break
-        case colorEnum.white: // White
-            hexColor = "#deddd1"
-            break
-        case colorEnum.black: // Black
-            hexColor = "#212121"
-    }
-
-    return hexColor
-}
-
-function addColorsToBoardKeyImage(colorKey: Array<number>, ctx: any) {
-    let i = 0
-    for (let x=0; x <= 1000; x += 240) {
-        for (let y=0; y <= 1000; y += 240) {
-            ctx.fillStyle = colorConverter(colorKey[i])
-            ctx.fillRect(x + 20, y + 20, 200, 200)
-            i++
-        }
-    }
-    ctx.stroke()
-}
-
-function createColorKeyImage(colorKey: Array<number>) {
-    // Board background
-    const canvas = Canvas.createCanvas(1200, 1200)
-    const ctx = canvas.getContext("2d")
-    ctx.fillStyle = '#36393f'
-    ctx.strokeStyle = '#000000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Draw cards
-    ctx.beginPath()
-    ctx.moveTo(240, 0)
-    ctx.lineTo(240, 1200)
-    ctx.moveTo(480, 0)
-    ctx.lineTo(480, 1200)
-    ctx.moveTo(720, 0)
-    ctx.lineTo(720, 1200)
-    ctx.moveTo(960, 0)
-    ctx.lineTo(960, 1200)
-    ctx.stroke()
-
-    addColorsToBoardKeyImage(colorKey, ctx)
-
-    return new AttachmentBuilder(canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
-}
-
 function initWordList() {
 
     var wordlist: Array<string> = [];
@@ -179,7 +122,10 @@ client.on('messageCreate', (message) => {
 
     if (message.content === '-key') {
         var colorKey = getNewColorKey()
-        var attachment = createColorKeyImage(colorKey)
+        var gameBoard = new Board()
+        var gameWords = getNewBoard(wordlist)
+        gameBoard.drawBoard(gameWords, colorKey)
+        attachment = gameBoard.getAttachment()
 
         message.reply({
             files: [attachment]
