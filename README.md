@@ -11,6 +11,7 @@ This is a work in progress the original implementation is written is index.ts an
     - Generate link and add bot to server
 In a powershell session run the following:
 ```
+npm init -y
 npm install discord.js dotenv
 ```
 In an admin powershell session run the following:
