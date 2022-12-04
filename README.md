@@ -24,3 +24,9 @@ Your bot is now ready to be launched with:
 ```
 ts-node index
 ```
+
+# Commands
+|Command|Description|
+|---|---|
+|-new|Generates a new board with words randomly placed|
+|-key|Generates a new board color key with colors randomly placed|
