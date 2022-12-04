@@ -197,6 +197,9 @@ client.on('ready', () => {
 })
 
 var players: Array<string> = [];
+var wordlist = initWordList()
+var currentBoard = getNewBoard(wordlist)
+var attachment
 
 client.on('messageCreate', (message) => {
 
@@ -212,9 +215,9 @@ client.on('messageCreate', (message) => {
     }
 
     if (message.content === '-new') {
-        var wordlist = initWordList()
-        var currentBoard = getNewBoard(wordlist)
-        var attachment = createBoardImage(currentBoard)
+        wordlist = initWordList()
+        currentBoard = getNewBoard(wordlist)
+        attachment = createBoardImage(currentBoard)
 
         message.reply({
             files: [attachment]
