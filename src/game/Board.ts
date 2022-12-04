@@ -1,4 +1,3 @@
-import { readFileSync } from 'fs'
 import DiscordJS, { AttachmentBuilder, Client, ContextMenuCommandAssertions, GatewayIntentBits } from 'discord.js'
 const Canvas = require('@napi-rs/canvas')
 
@@ -38,10 +37,10 @@ class Board {
         let i = 0
         for (let x=0; x <= 1000; x += 240) {
             for (let y=0; y <= 1000; y += 240) {
-                this.ctx.font = this.calcWordSize(wordlist[i].word)
+                this.ctx.font = this.calcWordSize(wordlist[i])
                 this.ctx.fillStyle = "white"
                 this.ctx.textAlign = "center"
-                this.ctx.fillText(wordlist[i].word, x + 120, y + 120)
+                this.ctx.fillText(wordlist[i], x + 120, y + 120)
                 this.ctx.rect(x, y, 240, 240)
                 i++
             }
@@ -63,6 +62,10 @@ class Board {
         this.ctx.stroke()
 
         this.drawWordsOnBoard(wordlist)
+    }
+
+    getAttachment() {
+        return new AttachmentBuilder(this.canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
     }
 
 

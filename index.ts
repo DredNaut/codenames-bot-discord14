@@ -1,7 +1,9 @@
-import DiscordJS, { AttachmentBuilder, Client, ContextMenuCommandAssertions, GatewayIntentBits } from 'discord.js'
+import DiscordJS, { AttachmentBuilder, Client, GatewayIntentBits } from 'discord.js'
 import dotenv from 'dotenv'
 import { readFileSync } from 'fs'
+import { Board } from './src/game/Board'
 const Canvas = require('@napi-rs/canvas')
+import "./src/game/Board.ts"
 dotenv.config()
 
 enum colorEnum {
@@ -9,16 +11,6 @@ enum colorEnum {
     blue,
     white,
     black
-}
-
-function calcWordSize(word: string, ctx: any) {
-    let fontSize = 43
-
-    do {
-        ctx.font = `bold ${fontSize -= 5}px`
-    } while(ctx.measureText(word).width > 240)
-
-    return ctx.font
 }
 
 function colorConverter(color: number) : string {
@@ -74,46 +66,6 @@ function createColorKeyImage(colorKey: Array<number>) {
     ctx.stroke()
 
     addColorsToBoardKeyImage(colorKey, ctx)
-
-    return new AttachmentBuilder(canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
-}
-
-function addWordsToBoardImage(wordlist: Array<string>, ctx: any) {
-    let i = 0
-    for (let x=0; x <= 1000; x += 240) {
-        for (let y=0; y <= 1000; y += 240) {
-            ctx.font = calcWordSize(wordlist[i], ctx)
-            ctx.fillStyle = "white"
-            ctx.textAlign = "center"
-            ctx.fillText(wordlist[i], x + 120, y + 120)
-            ctx.rect(x, y, 240, 240)
-            i++
-        }
-    }
-    ctx.stroke()
-}
-
-function createBoardImage(wordlist: Array<string>) {
-    // Board background
-    const canvas = Canvas.createCanvas(1200, 1200)
-    const ctx = canvas.getContext("2d")
-    ctx.fillStyle = '#36393f'
-    ctx.strokeStyle = '#000000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Draw cards
-    ctx.beginPath()
-    ctx.moveTo(240, 0)
-    ctx.lineTo(240, 1200)
-    ctx.moveTo(480, 0)
-    ctx.lineTo(480, 1200)
-    ctx.moveTo(720, 0)
-    ctx.lineTo(720, 1200)
-    ctx.moveTo(960, 0)
-    ctx.lineTo(960, 1200)
-    ctx.stroke()
-
-    addWordsToBoardImage(wordlist, ctx)
 
     return new AttachmentBuilder(canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
 }
@@ -215,9 +167,10 @@ client.on('messageCreate', (message) => {
     }
 
     if (message.content === '-new') {
-        wordlist = initWordList()
-        currentBoard = getNewBoard(wordlist)
-        attachment = createBoardImage(currentBoard)
+        var gameBoard = new Board()
+        var gameWords = getNewBoard(wordlist)
+        gameBoard.drawBoard(gameWords)
+        attachment = gameBoard.getAttachment()
 
         message.reply({
             files: [attachment]
