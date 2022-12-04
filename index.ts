@@ -1,8 +1,7 @@
-import DiscordJS, { AttachmentBuilder, Client, GatewayIntentBits } from 'discord.js'
+import DiscordJS, {Client, GatewayIntentBits, TextChannel } from 'discord.js'
 import dotenv from 'dotenv'
 import { readFileSync } from 'fs'
 import { Board } from './src/game/Board'
-const Canvas = require('@napi-rs/canvas')
 import "./src/game/Board.ts"
 dotenv.config()
 
@@ -13,12 +12,12 @@ enum colorEnum {
     black
 }
 
+var teamStart = 0
+
 function initWordList() {
 
     var wordlist: Array<string> = [];
-
     const data = readFileSync('./wordlist.txt', 'utf-8')
-
     const lines = data.split(/\r?\n/)
 
     lines.forEach(line => {
@@ -37,13 +36,13 @@ function getRandomWord(wordlist: Array<string>) : string {
 
 function getNewColorKey() : Array<number> {
     var colorKey: Array<number> = []
-    var firstGuess = getRandomInt(0, 1)
+    teamStart = getRandomInt(0, 1)
     var color
     var maxArr: Array<number> = [0, 0, 7, 1]
     var countArr: Array<number> = [0, 0, 0, 0]
     var i = 0
 
-    if (colorEnum.red == firstGuess) {
+    if (colorEnum.red == teamStart) {
         maxArr[colorEnum.red] = 9
         maxArr[colorEnum.blue] = 8
     }
@@ -93,8 +92,13 @@ client.on('ready', () => {
 
 var players: Array<string> = [];
 var wordlist = initWordList()
-var currentBoard = getNewBoard(wordlist)
 var attachment
+var colorKey: Array<number> = []
+var gameWords: Array<string> = []
+var gameBoard = {} as Board
+var masterBoard = {} as Board
+var spymasterChannel: string
+var publicChannel: string
 
 client.on('messageCreate', (message) => {
 
@@ -110,10 +114,14 @@ client.on('messageCreate', (message) => {
     }
 
     if (message.content === '-new') {
-        var gameBoard = new Board()
-        var gameWords = getNewBoard(wordlist)
-        gameBoard.drawBoard(gameWords)
+        colorKey = getNewColorKey()
+        gameWords = getNewBoard(wordlist)
+        gameBoard = new Board()
+        gameWords = getNewBoard(wordlist)
+        gameBoard.drawBoard(gameWords, colorKey, false)
         attachment = gameBoard.getAttachment()
+        console.log(`${message.channel} id: ${message.channelId}`)
+        publicChannel = message.channelId
 
         message.reply({
             files: [attachment]
@@ -121,15 +129,64 @@ client.on('messageCreate', (message) => {
     }
 
     if (message.content === '-key') {
-        var colorKey = getNewColorKey()
-        var gameBoard = new Board()
-        var gameWords = getNewBoard(wordlist)
-        gameBoard.drawBoard(gameWords, colorKey)
-        attachment = gameBoard.getAttachment()
+        masterBoard = new Board()
+        masterBoard.drawBoard(gameWords, colorKey, true)
+        attachment = masterBoard.getAttachment()
+        var teamString = "🔴 Red"
+        console.log(`${message.channel} id: ${message.channelId}`)
+        spymasterChannel = message.channelId
+
+        if (teamStart == colorEnum.blue)
+        {
+            teamString = "🔵 Blue"
+        }
 
         message.reply({
+            content: teamString + " Team Goes First!",
             files: [attachment]
         })
+    }
+
+    var guessRegex = /-g [a-z]*/
+    if (message.content.match(guessRegex)) {
+        var guess = message.content.split(" ", 2)[1]
+        console.log("Received Guess: " + guess)
+
+        if (gameBoard.colorGuess(guess)) {
+            console.log("valid guess")
+            masterBoard.hideWord(guess)
+
+            message.reply({
+                content: `${author} guessed "**${guess}**"`,
+                files: [gameBoard.getAttachment()]
+            })
+
+            // to spymasters
+            const channel = client.channels.cache.get(spymasterChannel);
+            if (channel) {
+                (channel as TextChannel).send({
+                    content: `${author} guessed "**${guess}**"`,
+                    files: [masterBoard.getAttachment()]
+                });
+            }
+        }
+        else {
+            message.reply({
+                content: `${author} guess "**${guess}**" was is not a valid guess..`,
+            })
+        }
+    }
+
+
+    if (message.content === '-wipe') {
+        const channel = client.channels.cache.get(spymasterChannel);
+        if (channel) {
+            (channel as TextChannel).bulkDelete(50);
+        }
+        const other = client.channels.cache.get(publicChannel);
+        if (other) {
+            (other as TextChannel).bulkDelete(50);
+        }
     }
 
     if (message.content === '-list-players') {
