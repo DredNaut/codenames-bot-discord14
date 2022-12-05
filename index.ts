@@ -1,7 +1,8 @@
-import DiscordJS, { AttachmentBuilder, Client, ContextMenuCommandAssertions, GatewayIntentBits } from 'discord.js'
 import dotenv from 'dotenv'
 import { readFileSync } from 'fs'
-const Canvas = require('@napi-rs/canvas')
+import { Board } from './src/game/Board'
+import "./src/game/Board.ts"
+import { ClientAdapter } from './src/discord/ClientAdapter'
 dotenv.config()
 
 enum colorEnum {
@@ -11,119 +12,10 @@ enum colorEnum {
     black
 }
 
-function calcWordSize(word: string, ctx: any) {
-    let fontSize = 43
-
-    do {
-        ctx.font = `bold ${fontSize -= 5}px`
-    } while(ctx.measureText(word).width > 240)
-
-    return ctx.font
-}
-
-function colorConverter(color: number) : string {
-    var hexColor: string = "";
-
-    switch(color) {
-        case colorEnum.red: // Red
-            hexColor = "#bf3232"
-            break
-        case colorEnum.blue: // Blue
-            hexColor = "#2f81f5"
-            break
-        case colorEnum.white: // White
-            hexColor = "#deddd1"
-            break
-        case colorEnum.black: // Black
-            hexColor = "#212121"
-    }
-
-    return hexColor
-}
-
-function addColorsToBoardKeyImage(colorKey: Array<number>, ctx: any) {
-    let i = 0
-    for (let x=0; x <= 1000; x += 240) {
-        for (let y=0; y <= 1000; y += 240) {
-            ctx.fillStyle = colorConverter(colorKey[i])
-            ctx.fillRect(x + 20, y + 20, 200, 200)
-            i++
-        }
-    }
-    ctx.stroke()
-}
-
-function createColorKeyImage(colorKey: Array<number>) {
-    // Board background
-    const canvas = Canvas.createCanvas(1200, 1200)
-    const ctx = canvas.getContext("2d")
-    ctx.fillStyle = '#36393f'
-    ctx.strokeStyle = '#000000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Draw cards
-    ctx.beginPath()
-    ctx.moveTo(240, 0)
-    ctx.lineTo(240, 1200)
-    ctx.moveTo(480, 0)
-    ctx.lineTo(480, 1200)
-    ctx.moveTo(720, 0)
-    ctx.lineTo(720, 1200)
-    ctx.moveTo(960, 0)
-    ctx.lineTo(960, 1200)
-    ctx.stroke()
-
-    addColorsToBoardKeyImage(colorKey, ctx)
-
-    return new AttachmentBuilder(canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
-}
-
-function addWordsToBoardImage(wordlist: Array<string>, ctx: any) {
-    let i = 0
-    for (let x=0; x <= 1000; x += 240) {
-        for (let y=0; y <= 1000; y += 240) {
-            ctx.font = calcWordSize(wordlist[i], ctx)
-            ctx.fillStyle = "white"
-            ctx.textAlign = "center"
-            ctx.fillText(wordlist[i], x + 120, y + 120)
-            ctx.rect(x, y, 240, 240)
-            i++
-        }
-    }
-    ctx.stroke()
-}
-
-function createBoardImage(wordlist: Array<string>) {
-    // Board background
-    const canvas = Canvas.createCanvas(1200, 1200)
-    const ctx = canvas.getContext("2d")
-    ctx.fillStyle = '#36393f'
-    ctx.strokeStyle = '#000000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Draw cards
-    ctx.beginPath()
-    ctx.moveTo(240, 0)
-    ctx.lineTo(240, 1200)
-    ctx.moveTo(480, 0)
-    ctx.lineTo(480, 1200)
-    ctx.moveTo(720, 0)
-    ctx.lineTo(720, 1200)
-    ctx.moveTo(960, 0)
-    ctx.lineTo(960, 1200)
-    ctx.stroke()
-
-    addWordsToBoardImage(wordlist, ctx)
-
-    return new AttachmentBuilder(canvas.toBuffer('image/png'), {name: 'gameBoard.png'});
-}
-
 function initWordList() {
 
     var wordlist: Array<string> = [];
-
     const data = readFileSync('./wordlist.txt', 'utf-8')
-
     const lines = data.split(/\r?\n/)
 
     lines.forEach(line => {
@@ -142,13 +34,13 @@ function getRandomWord(wordlist: Array<string>) : string {
 
 function getNewColorKey() : Array<number> {
     var colorKey: Array<number> = []
-    var firstGuess = getRandomInt(0, 1)
+    teamStart = getRandomInt(0, 1)
     var color
     var maxArr: Array<number> = [0, 0, 7, 1]
     var countArr: Array<number> = [0, 0, 0, 0]
     var i = 0
 
-    if (colorEnum.red == firstGuess) {
+    if (colorEnum.red == teamStart) {
         maxArr[colorEnum.red] = 9
         maxArr[colorEnum.blue] = 8
     }
@@ -184,79 +76,91 @@ function getNewBoard(wordlist: Array<string>) : Array<string> {
     return newBoard
 }
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessages
-    ]
-})
-
-client.on('ready', () => {
-    console.log('The bot is ready')
-})
+var dClient = new ClientAdapter()
+var newMessage
 
 var players: Array<string> = [];
 var wordlist = initWordList()
-var currentBoard = getNewBoard(wordlist)
 var attachment
+var colorKey: Array<number> = []
+var gameWords: Array<string> = []
+var gameBoard = {} as Board
+var masterBoard = {} as Board
+var teamStart = 0
 
-client.on('messageCreate', (message) => {
-
-    var author = message.author.username;
-    console.log(`Received Message: ${message.content} From User: ${author}`)
-
-    if (message.content === '-join') {
-        players.push(author)
-
-        message.reply({
-            content: author + ' Successfully Joined Game',
-        })
-    }
-
-    if (message.content === '-new') {
-        wordlist = initWordList()
-        currentBoard = getNewBoard(wordlist)
-        attachment = createBoardImage(currentBoard)
-
-        message.reply({
-            files: [attachment]
-        })
-    }
-
-    if (message.content === '-key') {
-        var colorKey = getNewColorKey()
-        var attachment = createColorKeyImage(colorKey)
-
-        message.reply({
-            files: [attachment]
-        })
-    }
-
-    if (message.content === '-list-players') {
-
-        message.reply({
-            content: 'Players: ' + players.toString(),
-        })
-    }
-
-    if (message.content === '-leave') {
-
-        if (players.includes(author)) {
-
-            delete players[players.indexOf(author)]
-            message.reply({
-                content: author + ' has left the game.',
-            })
-        }
-        else {
-
-            message.reply({
-                content: author + ' is not in the game.',
-            })
-        }
-    }
-
+dClient.client.on('messageCreate', (message) => {
+    console.log(`Received Message: ${message.content} From User: ${message.author.username}`)
+    gameHandler({channelId: message.channelId, content: message.content, author: message.author.username})
 })
 
-client.login(process.env.TOKEN)
+function gameHandler(newMessage: any) {
+
+    if (newMessage) {
+
+        if (newMessage.content === '-join') {
+            players.push(newMessage.author)
+            dClient.sendPublicMessage({content: `${newMessage.author} Successfully Joined Game`})
+        }
+
+        if (newMessage.content === '-new') {
+            gameBoard = new Board()
+            colorKey = getNewColorKey()
+            gameWords = getNewBoard(wordlist)
+            gameBoard.drawBoard(gameWords, colorKey, false)
+            attachment = gameBoard.getAttachment()
+            dClient.setPublicChannel(newMessage.channelId)
+            dClient.sendPublicMessage({files: [attachment]})
+        }
+
+        if (newMessage.content === '-key') {
+            masterBoard = new Board()
+            masterBoard.drawBoard(gameWords, colorKey, true)
+            attachment = masterBoard.getAttachment()
+            dClient.setSpyMasterChannel(newMessage.channelId)
+            var teamString = "🔴 Red"
+            if (teamStart == colorEnum.blue)
+            {
+                teamString = "🔵 Blue"
+            }
+
+            dClient.sendSpyMasterMessage({content: teamString + " Team Goes First!", files: [attachment]})
+        }
+
+        var guessRegex = /-g [a-z]*/
+        if (newMessage.content.match(guessRegex)) {
+            var guess = newMessage.content.split(" ", 2)[1]
+
+            if (gameBoard.colorGuess(guess)) {
+                console.log("valid guess")
+                masterBoard.hideWord(guess)
+
+                dClient.sendPublicMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [gameBoard.getAttachment()]})
+                dClient.sendSpyMasterMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [masterBoard.getAttachment()]})
+            }
+            else {
+                dClient.sendPublicMessage({content: `${newMessage.author} guess "**${guess}**" was is not a valid guess..`})
+            }
+        }
+
+        if (newMessage.content === '-wipe') {
+            dClient.wipePublic()
+            dClient.wipeSpymaster()
+        }
+
+        if (newMessage.content === '-list-players') {
+            dClient.sendPublicMessage({content: 'Players: ' + players.toString()})
+        }
+
+        if (newMessage.content === '-leave') {
+            if (players.includes(newMessage.author)) {
+
+                delete players[players.indexOf(newMessage.author)]
+                dClient.sendPublicMessage({content: newMessage.author + ' has left the game.'})
+            }
+
+            else {
+                dClient.sendPublicMessage({content: newMessage.author + ' is not in the game.'})
+            }
+        }
+    }
+}
