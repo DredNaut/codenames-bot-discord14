@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import { readFileSync } from 'fs'
 import { Board } from './src/game/Board'
 import "./src/game/Board.ts"
-import { ClientAdapter } from './src/discord/Handler'
+import { ClientAdapter } from './src/discord/ClientAdapter'
 dotenv.config()
 
 enum colorEnum {

@@ -9,6 +9,14 @@ This is a work in progress the original implementation is written is index.ts an
     - Create a bot with message read and bot permissions
     - Give bot administrator
     - Generate link and add bot to server
+    - copy api key
+Clone this repository
+
+Add API Token and User ID to new file .env within repo
+```
+TOKEN=<YOUR BOTS TOKEN>
+ID=<YOUR DISCORD USER ID#NUMBER>
+```
 In a powershell session run the following:
 ```
 npm init -y
