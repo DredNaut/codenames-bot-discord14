@@ -15,17 +15,22 @@ This is a work in progress the original implementation is written is index.ts an
     - copy api key
 
 Clone this repository
+```
+git clone https://github.com/DredNaut/codenames-bot-discord14.git
+```
 
 Add API Token and User ID to new file .env within repo
 ```
 TOKEN=<YOUR BOTS TOKEN>
 ID=<YOUR DISCORD USER ID#NUMBER>
 ```
+
 In a powershell session run the following:
 ```
 npm init -y
 npm install discord.js dotenv
 ```
+
 In an admin powershell session run the following:
 ```
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
