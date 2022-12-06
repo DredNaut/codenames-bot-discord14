@@ -13,6 +13,7 @@ This is a work in progress the original implementation is written is index.ts an
     - Give bot administrator
     - Generate link and add bot to server
     - copy api key
+
 Clone this repository
 
 Add API Token and User ID to new file .env within repo
