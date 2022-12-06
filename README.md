@@ -19,7 +19,7 @@ Clone this repository
 git clone https://github.com/DredNaut/codenames-bot-discord14.git
 ```
 
-Add API Token and User ID to new file .env within repo
+Add API Token and User ID to new file .env within repository root directory
 ```
 TOKEN=<YOUR BOTS TOKEN>
 ID=<YOUR DISCORD USER ID#NUMBER>

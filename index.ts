@@ -1,9 +1,10 @@
 import dotenv from 'dotenv'
-import { readFileSync } from 'fs'
-import { Board } from './src/game/Board'
-import "./src/game/Board.ts"
-import { ClientAdapter } from './src/discord/ClientAdapter'
 dotenv.config()
+
+import { readFileSync } from 'fs'
+
+import { Board } from './src/game/Board'
+import { ClientAdapter } from './src/discord/ClientAdapter'
 
 enum colorEnum {
     red = 0,
@@ -93,81 +94,103 @@ dClient.client.on('messageCreate', (message) => {
     gameHandler({channelId: message.channelId, content: message.content, author: message.author.username})
 })
 
+function cmdJoin(newMessage: any) {
+    players.push(newMessage.author)
+    dClient.sendPublicMessage({content: `${newMessage.author} Successfully Joined Game`})
+}
+
+function cmdNew(newMessage: any) {
+    gameBoard = new Board()
+    colorKey = getNewColorKey()
+    gameWords = getNewBoard(wordlist)
+    gameBoard.drawBoard(gameWords, colorKey, false)
+    attachment = gameBoard.getAttachment()
+    dClient.setPublicChannel(newMessage.channelId)
+    dClient.sendPublicMessage({files: [attachment]})
+}
+
+function cmdKey(newMessage: any) {
+    masterBoard = new Board()
+    masterBoard.drawBoard(gameWords, colorKey, true)
+    attachment = masterBoard.getAttachment()
+    dClient.setSpyMasterChannel(newMessage.channelId)
+    var teamString = "🔴 Red"
+    if (teamStart == colorEnum.blue)
+    {
+        teamString = "🔵 Blue"
+    }
+
+    dClient.sendSpyMasterMessage({content: teamString + " Team Goes First!", files: [attachment]})
+}
+
+function cmdWipe(newMessage: any) {
+    if (dClient.channelExists(dClient.spymasterChannel) &&
+        dClient.channelExists(dClient.publicChannel)) {
+        dClient.wipePublic()
+        dClient.wipeSpymaster()
+    }
+
+    else {
+        dClient.wipeChannel(dClient.getChannelById(newMessage.channelId))
+    }
+}
+
+function cmdGuess(newMessage: any) {
+    var guess = newMessage.content.split(" ", 2)[1]
+
+    if (gameBoard.colorGuess(guess)) {
+        console.log("valid guess")
+        masterBoard.hideWord(guess)
+
+        dClient.sendPublicMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [gameBoard.getAttachment()]})
+        dClient.sendSpyMasterMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [masterBoard.getAttachment()]})
+    }
+    else {
+        dClient.sendPublicMessage({content: `${newMessage.author} guess "**${guess}**" was is not a valid guess..`})
+    }
+}
+
+function cmdListPlayers(newMessage: any) {
+    dClient.sendPublicMessage({content: 'Players: ' + players.toString()})
+}
+
+function cmdLeave(newMessage: any) {
+    if (players.includes(newMessage.author)) {
+
+        delete players[players.indexOf(newMessage.author)]
+        dClient.sendPublicMessage({content: newMessage.author + ' has left the game.'})
+    }
+
+    else {
+        dClient.sendPublicMessage({content: newMessage.author + ' is not in the game.'})
+    }
+}
+
+var commandRef: any = {
+    '-join': cmdJoin,
+    '-new': cmdNew,
+    '-key': cmdKey,
+    '-wipe': cmdWipe,
+    '-list-players': cmdListPlayers,
+    '-leave': cmdLeave
+}
+
 function gameHandler(newMessage: any) {
 
-    if (newMessage) {
-
-        if (newMessage.content === '-join') {
-            players.push(newMessage.author)
-            dClient.sendPublicMessage({content: `${newMessage.author} Successfully Joined Game`})
-        }
-
-        if (newMessage.content === '-new') {
-            gameBoard = new Board()
-            colorKey = getNewColorKey()
-            gameWords = getNewBoard(wordlist)
-            gameBoard.drawBoard(gameWords, colorKey, false)
-            attachment = gameBoard.getAttachment()
-            dClient.setPublicChannel(newMessage.channelId)
-            dClient.sendPublicMessage({files: [attachment]})
-        }
-
-        if (newMessage.content === '-key') {
-            masterBoard = new Board()
-            masterBoard.drawBoard(gameWords, colorKey, true)
-            attachment = masterBoard.getAttachment()
-            dClient.setSpyMasterChannel(newMessage.channelId)
-            var teamString = "🔴 Red"
-            if (teamStart == colorEnum.blue)
-            {
-                teamString = "🔵 Blue"
-            }
-
-            dClient.sendSpyMasterMessage({content: teamString + " Team Goes First!", files: [attachment]})
-        }
-
+    if (newMessage.content) {
         var guessRegex = /-g [a-z]*/
         if (newMessage.content.match(guessRegex)) {
-            var guess = newMessage.content.split(" ", 2)[1]
+            cmdGuess(newMessage)
+        }
 
-            if (gameBoard.colorGuess(guess)) {
-                console.log("valid guess")
-                masterBoard.hideWord(guess)
-
-                dClient.sendPublicMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [gameBoard.getAttachment()]})
-                dClient.sendSpyMasterMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [masterBoard.getAttachment()]})
+        else {
+            console.log(`Message recieved: ${newMessage.content}`)
+            try {
+                commandRef[newMessage.content](newMessage)
             }
-            else {
-                dClient.sendPublicMessage({content: `${newMessage.author} guess "**${guess}**" was is not a valid guess..`})
+            catch (error) {
             }
         }
 
-        if (newMessage.content === '-wipe') {
-            if (dClient.channelExists(dClient.spymasterChannel) &&
-                dClient.channelExists(dClient.publicChannel)) {
-                dClient.wipePublic()
-                dClient.wipeSpymaster()
-            }
-
-            else {
-                dClient.wipeChannel(dClient.getChannelById(newMessage.channelId))
-            }
-        }
-
-        if (newMessage.content === '-list-players') {
-            dClient.sendPublicMessage({content: 'Players: ' + players.toString()})
-        }
-
-        if (newMessage.content === '-leave') {
-            if (players.includes(newMessage.author)) {
-
-                delete players[players.indexOf(newMessage.author)]
-                dClient.sendPublicMessage({content: newMessage.author + ' has left the game.'})
-            }
-
-            else {
-                dClient.sendPublicMessage({content: newMessage.author + ' is not in the game.'})
-            }
-        }
     }
 }
