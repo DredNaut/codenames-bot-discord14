@@ -43,4 +43,4 @@ ts-node index
 |-new|Generates a new board with words randomly placed|None|
 |-key|Generates a new board color key with colors randomly placed|```-new```|
 |-g GUESS|Guesses a word from public channel board, updates master key board in spymasters channel accordingly|```-new``` and ```-key```|
-|-wipe|Clears all messages in public and spymaster channel. (useful between games)|```-new``` and ```-key```|
+|-wipe|Clears last 100 messages in channel, if ```new``` and ```key``` have been run then it clears all messages in public and spymaster channel. (useful between games)||

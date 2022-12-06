@@ -143,8 +143,15 @@ function gameHandler(newMessage: any) {
         }
 
         if (newMessage.content === '-wipe') {
-            dClient.wipePublic()
-            dClient.wipeSpymaster()
+            if (dClient.channelExists(dClient.spymasterChannel) &&
+                dClient.channelExists(dClient.publicChannel)) {
+                dClient.wipePublic()
+                dClient.wipeSpymaster()
+            }
+
+            else {
+                dClient.wipeChannel(dClient.getChannelById(newMessage.channelId))
+            }
         }
 
         if (newMessage.content === '-list-players') {

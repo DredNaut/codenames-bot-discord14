@@ -44,11 +44,30 @@ class ClientAdapter {
         }
     }
 
-    wipeSpymaster() {
-        (this.spymasterChannel as TextChannel).bulkDelete(100);
+    channelExists(channel: any) {
+        return (Object.keys(channel).length > 0)
     }
+
+    wipeSpymaster() {
+        if (this.channelExists(this.spymasterChannel)) {
+            (this.spymasterChannel as TextChannel).bulkDelete(100);
+        }
+    }
+
     wipePublic() {
-        (this.publicChannel as TextChannel).bulkDelete(100);
+        if (this.channelExists(this.publicChannel)) {
+            (this.publicChannel as TextChannel).bulkDelete(100);
+        }
+    }
+    
+    wipeChannel(channel: any) {
+        if (this.channelExists(channel)) {
+            (channel as TextChannel).bulkDelete(100)
+        }
+    }
+
+    getChannelById(channelId: string) {
+        return this.client.channels.cache.get(channelId)
     }
 
     setPublicChannel(channelId: string) {
