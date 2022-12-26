@@ -89,6 +89,10 @@ var gameBoard = {} as Board
 var masterBoard = {} as Board
 var teamStart = 0
 
+function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 dClient.client.on('messageCreate', (message) => {
     console.log(`Received Message: ${message.content} From User: ${message.author.username}`)
     gameHandler({channelId: message.channelId, content: message.content, author: message.author.username})
@@ -135,15 +139,21 @@ function cmdWipe(newMessage: any) {
     }
 }
 
-function cmdGuess(newMessage: any) {
+async function cmdGuess(newMessage: any) {
     var guess = newMessage.content.split(" ", 2)[1]
 
     if (gameBoard.colorGuess(guess)) {
-        console.log("valid guess")
-        masterBoard.hideWord(guess)
 
-        dClient.sendPublicMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [gameBoard.getAttachment()]})
-        dClient.sendSpyMasterMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [masterBoard.getAttachment()]})
+        if (dClient.channelExists(dClient.spymasterChannel) &&
+            dClient.channelExists(dClient.publicChannel)) {
+                dClient.wipePublic()
+                dClient.wipeSpymaster()
+                await delay(500);
+                dClient.sendPublicMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [gameBoard.getAttachment()]})
+
+                masterBoard.hideWord(guess)
+                dClient.sendSpyMasterMessage({content: `${newMessage.author} guessed "**${guess}**"`, files: [masterBoard.getAttachment()]})
+        }
     }
     else {
         dClient.sendPublicMessage({content: `${newMessage.author} guess "**${guess}**" was is not a valid guess..`})
